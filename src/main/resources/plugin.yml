@@ -2,3 +2,7 @@ name: blockchat
 version: '${project.version}'
 main: org.biggertin.blockchat.Blockchat
 api-version: '1.20'
+commands:
+  reloadconfig:
+    description: Reloads the configuration from the config.yml file.
+    usage: /<command>

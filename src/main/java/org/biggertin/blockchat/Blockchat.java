@@ -1,12 +1,17 @@
 package org.biggertin.blockchat;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,9 +24,18 @@ public final class Blockchat extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         Bukkit.getPluginManager().registerEvents(this, this);
-        saveDefaultConfig(); // Save the default configuration
+        
+        // Check if the config.yml file exists before saving the default config
+        if (!new File(getDataFolder(), "config.yml").exists()) {
+            getLogger().info("No config.yml found, creating a new one...");
+            saveDefaultConfig();
+        } else {
+            getLogger().info("Loading existing config.yml...");
+        }
+        
         password = getConfig().getString("password", "password"); // Load password from config
         getLogger().info("Blockchat enabled!");
+
         // Load authenticated players from config
         List<String> canChatUsernames = getConfig().getStringList("canChat");
         for (String username : canChatUsernames) {
@@ -30,11 +44,12 @@ public final class Blockchat extends JavaPlugin implements Listener {
                 authenticatedPlayers.add(player);
             }
         }
+        // Print the users that can chat in console on start up
+        getLogger().info("Users that can chat: " + String.join(", ", canChatUsernames) + " | Chat password: " + password);
     }
 
     @Override
     public void onDisable() {
-        // Save the "can chat" list to config on disable
         List<String> canChatUsernames = getConfig().getStringList("canChat");
         for (Player player : authenticatedPlayers) {
             if (!canChatUsernames.contains(player.getName())) {
@@ -42,7 +57,7 @@ public final class Blockchat extends JavaPlugin implements Listener {
             }
         }
         getConfig().set("canChat", canChatUsernames);
-        saveConfig();
+        saveConfig(); // Ensure changes are saved on disable
     }
 
     @EventHandler
@@ -53,22 +68,40 @@ public final class Blockchat extends JavaPlugin implements Listener {
             if (message.equalsIgnoreCase(password) || message.toLowerCase().startsWith(password.toLowerCase() + " ")) {
                 authenticatedPlayers.add(player);
                 player.sendMessage("You have been authenticated! You can now chat freely.");
-                // Add player to "can chat" list in config
                 List<String> canChatUsernames = getConfig().getStringList("canChat");
                 if (!canChatUsernames.contains(player.getName())) {
                     canChatUsernames.add(player.getName());
                     getConfig().set("canChat", canChatUsernames);
-                    saveConfig();
+                    saveConfig(); // Save immediately after modification
                 }
                 if (message.length() > password.length() + 1) {
-                    // Send everything after the password as a chat message.
                     Bukkit.getServer().broadcastMessage("<" + player.getDisplayName() + "> " + message.substring(password.length() + 1));
                 }
-                event.setCancelled(true); // Cancel the event to prevent the original message from being sent.
+                event.setCancelled(true);
             } else {
                 player.sendMessage("You cannot chat until you provide the correct password! Please type the correct password!");
                 event.setCancelled(true);
             }
         }
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        List<String> canChatUsernames = getConfig().getStringList("canChat");
+        if (canChatUsernames.contains(player.getName())) {
+            authenticatedPlayers.add(player);
+        }
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (command.getName().equalsIgnoreCase("reloadconfig")) {
+            reloadConfig();
+            password = getConfig().getString("password", "password");
+            sender.sendMessage(ChatColor.GREEN + "Configuration reloaded. New password: " + password);
+            return true;
+        }
+        return false;
     }
 }
