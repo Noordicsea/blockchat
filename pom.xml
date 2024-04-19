@@ -6,7 +6,7 @@
 
     <groupId>org.biggertin</groupId>
     <artifactId>blockchat</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.2</version>
     <packaging>jar</packaging>
 
     <name>blockchat</name>
