@@ -1,0 +1,4 @@
+name: blockchat
+version: '${project.version}'
+main: org.biggertin.blockchat.Blockchat
+api-version: '1.20'
